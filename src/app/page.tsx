@@ -45,7 +45,6 @@ const money = new Intl.NumberFormat("ko-KR");
 
 export default function Home() {
   const [form, setForm] = useState(initialForm);
-  const [records, setRecords] = useState<Contribution[]>([]);
   const [status, setStatus] = useState("대기 중");
   const [isSaving, setIsSaving] = useState(false);
   const [sheetStatus, setSheetStatus] = useState<SheetStatus | null>(null);
@@ -124,7 +123,6 @@ export default function Home() {
     };
 
     setIsSaving(true);
-    setRecords((current) => [nextRecord, ...current]);
     setForm(initialForm);
 
     try {
@@ -162,35 +160,6 @@ export default function Home() {
     }
   }
 
-  function exportCsv() {
-    const header = ["시간", "구분", "이름", "관계", "금액", "방식", "메모"];
-    const rows = records.map((record) => [
-      new Date(record.createdAt).toLocaleString("ko-KR"),
-      record.side,
-      record.name,
-      record.relation,
-      String(record.amount),
-      record.payType,
-      record.memo,
-    ]);
-
-    const csv = [header, ...rows]
-      .map((row) =>
-        row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(","),
-      )
-      .join("\n");
-
-    const blob = new Blob(["\uFEFF", csv], {
-      type: "text/csv;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `축의대-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
   return (
     <main className="min-h-screen bg-[#f8f7f2] pb-6 text-stone-950">
       {toast && (
@@ -219,15 +188,7 @@ export default function Home() {
           <div className="flex shrink-0 gap-2 text-xs">
             <button
               type="button"
-              onClick={exportCsv}
-              className="h-10 rounded-md border border-stone-300 bg-white px-3 font-bold text-stone-800 shadow-sm transition hover:bg-stone-50"
-            >
-              CSV
-            </button>
-            <button
-              type="button"
               onClick={() => {
-                setRecords([]);
                 setStatus("목록을 비웠습니다.");
               }}
               className="h-10 rounded-md border border-rose-200 bg-rose-50 px-3 font-bold text-rose-800 transition hover:bg-rose-100"
@@ -242,7 +203,7 @@ export default function Home() {
         <div className="mb-4 grid grid-cols-2 gap-2">
           <div className="rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
             <p className="text-sm font-bold text-stone-500">시트 총 접수</p>
-            <p className="mt-1 text-3xl font-black">
+            <p className="mt-1 text-2xl font-black">
               {sheetStatus ? `${sheetStatus.count}건` : "-"}
             </p>
             {sheetError && (
