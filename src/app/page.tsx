@@ -7,6 +7,7 @@ type PayType = "현금" | "계좌";
 
 type Contribution = {
   id: string;
+  rowNumber?: number;
   name: string;
   side: Side;
   relation: string;
@@ -19,6 +20,7 @@ type Contribution = {
 type SheetStatus = {
   count: number;
   totalAmount: number;
+  contributions?: Contribution[];
   updatedAt: string;
 };
 
@@ -36,12 +38,21 @@ const initialForm = {
   memo: "",
 };
 
+const sideOptions: Side[] = ["신랑", "신부", "공통"];
+const payTypeOptions: PayType[] = ["현금", "계좌"];
+
 const amountPresets = [
   { label: "50,000원", value: "50,000" },
   { label: "100,000원", value: "100,000" },
 ];
 
 const money = new Intl.NumberFormat("ko-KR");
+const dateTime = new Intl.DateTimeFormat("ko-KR", {
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
 
 export default function Home() {
   const [form, setForm] = useState(initialForm);
@@ -51,6 +62,9 @@ export default function Home() {
   const [sheetError, setSheetError] = useState("");
   const [isLoadingSheet, setIsLoadingSheet] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [editingId, setEditingId] = useState("");
+  const [editForm, setEditForm] = useState(initialForm);
+  const [updatingId, setUpdatingId] = useState("");
 
   useEffect(() => {
     void loadSheetStatus();
@@ -160,6 +174,85 @@ export default function Home() {
     }
   }
 
+  function startEditing(contribution: Contribution) {
+    setEditingId(getContributionKey(contribution));
+    setEditForm({
+      name: contribution.name,
+      side: sideOptions.includes(contribution.side) ? contribution.side : "공통",
+      relation: contribution.relation,
+      amount: money.format(contribution.amount),
+      payType: payTypeOptions.includes(contribution.payType)
+        ? contribution.payType
+        : "현금",
+      memo: contribution.memo,
+    });
+  }
+
+  async function handleUpdate(contribution: Contribution) {
+    const amount = Number(editForm.amount.replaceAll(",", ""));
+
+    if (!contribution.id && !contribution.rowNumber) {
+      showToast({
+        tone: "error",
+        message: "이 항목은 시트 행 정보가 없어 수정할 수 없습니다.",
+      });
+      return;
+    }
+
+    if (!editForm.name.trim() || !Number.isFinite(amount) || amount <= 0) {
+      showToast({
+        tone: "error",
+        message: "이름과 금액을 확인해 주세요.",
+      });
+      return;
+    }
+
+    const nextRecord: Contribution = {
+      ...contribution,
+      name: editForm.name.trim(),
+      side: editForm.side,
+      relation: editForm.relation.trim(),
+      amount,
+      payType: editForm.payType,
+      memo: editForm.memo.trim(),
+    };
+
+    setUpdatingId(getContributionKey(contribution));
+
+    try {
+      const response = await fetch("/api/contributions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nextRecord),
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.reason || "update failed");
+      }
+
+      setEditingId("");
+      setStatus(`${nextRecord.name} 님 수정 완료`);
+      showToast({
+        tone: "success",
+        message: `${nextRecord.name} 님 수정 완료`,
+      });
+      await loadSheetStatus();
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message === "missing-script-url"
+          ? "Apps Script URL을 .env.local에 넣어 주세요."
+          : "수정하지 못했습니다. Apps Script 배포를 확인해 주세요.";
+
+      showToast({
+        tone: "error",
+        message,
+      });
+    } finally {
+      setUpdatingId("");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f8f7f2] pb-6 text-stone-950">
       {toast && (
@@ -255,7 +348,7 @@ export default function Home() {
             </label>
 
             <div className="grid grid-cols-3 gap-2">
-              {(["신랑", "신부", "공통"] as Side[]).map((side) => (
+              {sideOptions.map((side) => (
                 <button
                   key={side}
                   type="button"
@@ -327,7 +420,7 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              {(["현금", "계좌"] as PayType[]).map((payType) => (
+              {payTypeOptions.map((payType) => (
                 <button
                   key={payType}
                   type="button"
@@ -364,7 +457,221 @@ export default function Home() {
             </button>
           </div>
         </form>
+
+        <section className="mt-4 rounded-lg border border-stone-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between gap-3 border-b border-stone-100 px-4 py-3">
+            <h2 className="text-lg font-black">접수 목록</h2>
+            <span className="text-xs font-bold text-stone-500">
+              {sheetStatus ? `${sheetStatus.count}건` : "시트 기준"}
+            </span>
+          </div>
+
+          {sheetError ? (
+            <p className="px-4 py-5 text-sm font-semibold text-rose-700">
+              {sheetError}
+            </p>
+          ) : isLoadingSheet && !sheetStatus ? (
+            <p className="px-4 py-5 text-sm font-semibold text-stone-500">
+              불러오는 중
+            </p>
+          ) : sheetStatus?.contributions?.length ? (
+            <ul className="divide-y divide-stone-100">
+              {sheetStatus.contributions.map((contribution, index) => (
+                <li
+                  key={getContributionKey(contribution, index)}
+                  className="px-4 py-3"
+                >
+                  {editingId === getContributionKey(contribution, index) ? (
+                    <div className="grid gap-3">
+                      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                        <label className="grid min-w-0 gap-1 text-xs font-bold text-stone-600">
+                          이름
+                          <input
+                            value={editForm.name}
+                            onChange={(event) =>
+                              setEditForm((current) => ({
+                                ...current,
+                                name: event.target.value,
+                              }))
+                            }
+                            className="h-11 w-full min-w-0 rounded-md border border-stone-300 px-3 text-base font-bold text-stone-950 outline-none ring-rose-200 transition focus:ring-4"
+                          />
+                        </label>
+                        <label className="grid min-w-0 gap-1 text-xs font-bold text-stone-600">
+                          금액
+                          <input
+                            inputMode="numeric"
+                            value={editForm.amount}
+                            onChange={(event) =>
+                              setEditForm((current) => ({
+                                ...current,
+                                amount: event.target.value.replace(/[^\d,]/g, ""),
+                              }))
+                            }
+                            className="h-11 w-full min-w-0 rounded-md border border-stone-300 px-3 text-right text-base font-black text-stone-950 outline-none ring-rose-200 transition focus:ring-4"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        {sideOptions.map((side) => (
+                          <button
+                            key={side}
+                            type="button"
+                            onClick={() =>
+                              setEditForm((current) => ({ ...current, side }))
+                            }
+                            className={`h-10 rounded-md border text-sm font-black transition ${
+                              editForm.side === side
+                                ? "border-rose-700 bg-rose-700 text-white"
+                                : "border-stone-300 bg-white text-stone-700"
+                            }`}
+                          >
+                            {side}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        {payTypeOptions.map((payType) => (
+                          <button
+                            key={payType}
+                            type="button"
+                            onClick={() =>
+                              setEditForm((current) => ({ ...current, payType }))
+                            }
+                            className={`h-10 rounded-md border text-sm font-black transition ${
+                              editForm.payType === payType
+                                ? "border-stone-950 bg-stone-950 text-white"
+                                : "border-stone-300 bg-white text-stone-700"
+                            }`}
+                          >
+                            {payType}
+                          </button>
+                        ))}
+                      </div>
+
+                      <label className="grid gap-1 text-xs font-bold text-stone-600">
+                        관계
+                        <input
+                          value={editForm.relation}
+                          onChange={(event) =>
+                            setEditForm((current) => ({
+                              ...current,
+                              relation: event.target.value,
+                            }))
+                          }
+                          className="h-10 rounded-md border border-stone-300 px-3 text-sm font-semibold text-stone-950 outline-none ring-rose-200 transition focus:ring-4"
+                        />
+                      </label>
+
+                      <label className="grid gap-1 text-xs font-bold text-stone-600">
+                        메모
+                        <textarea
+                          value={editForm.memo}
+                          onChange={(event) =>
+                            setEditForm((current) => ({
+                              ...current,
+                              memo: event.target.value,
+                            }))
+                          }
+                          className="min-h-14 rounded-md border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-950 outline-none ring-rose-200 transition focus:ring-4"
+                        />
+                      </label>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleUpdate(contribution)}
+                          disabled={
+                            updatingId === getContributionKey(contribution, index)
+                          }
+                          className="h-11 rounded-md bg-stone-950 text-sm font-black text-white transition hover:bg-stone-800 disabled:bg-stone-400"
+                        >
+                          {updatingId === getContributionKey(contribution, index)
+                            ? "저장 중"
+                            : "저장"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingId("")}
+                          className="h-11 rounded-md border border-stone-300 bg-white text-sm font-black text-stone-800 transition hover:bg-stone-50"
+                        >
+                          취소
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-base font-black text-stone-950">
+                              {contribution.name || "이름 없음"}
+                            </p>
+                            <span className="rounded bg-stone-100 px-2 py-0.5 text-xs font-bold text-stone-700">
+                              {contribution.side}
+                            </span>
+                            {contribution.payType && (
+                              <span className="rounded bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-800">
+                                {contribution.payType}
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 truncate text-sm font-semibold text-stone-500">
+                            {[contribution.relation, contribution.memo]
+                              .filter(Boolean)
+                              .join(" · ") || "상세 없음"}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-base font-black text-stone-950">
+                            {money.format(contribution.amount)}원
+                          </p>
+                          <p className="mt-1 text-xs font-semibold text-stone-500">
+                            {formatCreatedAt(contribution.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => startEditing(contribution)}
+                        disabled={!contribution.id && !contribution.rowNumber}
+                        className="h-10 rounded-md border border-stone-300 bg-white text-sm font-black text-stone-800 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:text-stone-400"
+                      >
+                        수정
+                      </button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="px-4 py-5 text-sm font-semibold text-stone-500">
+              아직 접수된 내역이 없습니다.
+            </p>
+          )}
+        </section>
       </section>
     </main>
+  );
+}
+
+function formatCreatedAt(createdAt: string) {
+  const date = new Date(createdAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return dateTime.format(date);
+}
+
+function getContributionKey(contribution: Contribution, fallbackIndex = 0) {
+  return (
+    contribution.id ||
+    (contribution.rowNumber ? `row-${contribution.rowNumber}` : "") ||
+    `${contribution.createdAt}-${fallbackIndex}`
   );
 }

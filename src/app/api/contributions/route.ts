@@ -45,6 +45,20 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const payload = await request.json();
+
+  return syncWithScript(payload);
+}
+
+export async function PATCH(request: Request) {
+  const payload = await request.json();
+
+  return syncWithScript({
+    action: "update",
+    contribution: payload,
+  });
+}
+
+async function syncWithScript(payload: unknown) {
   const scriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
 
   if (!scriptUrl) {
@@ -63,6 +77,15 @@ export async function POST(request: Request) {
   if (!response.ok) {
     return NextResponse.json(
       { saved: false, reason: "script-request-failed" },
+      { status: 502 },
+    );
+  }
+
+  const result = await response.json().catch(() => null);
+
+  if (result && result.saved === false) {
+    return NextResponse.json(
+      { saved: false, reason: result.reason || "script-save-failed" },
       { status: 502 },
     );
   }
