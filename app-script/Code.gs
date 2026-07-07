@@ -57,6 +57,10 @@ function doPost(e) {
       return updateContribution_(sheet, data.contribution || {});
     }
 
+    if (data.action === 'delete') {
+      return deleteContribution_(sheet, data.contribution || {});
+    }
+
     sheet.appendRow([
       new Date(data.createdAt),
       data.side || '',
@@ -78,11 +82,44 @@ function doPost(e) {
 }
 
 function updateContribution_(sheet, data) {
+  const targetRow = findContributionRow_(sheet, data);
+
+  if (!targetRow) {
+    return json_({ saved: false, reason: 'not-found' });
+  }
+
+  sheet.getRange(targetRow, 1, 1, 8).setValues([[
+    new Date(data.createdAt),
+    data.side || '',
+    data.name || '',
+    data.relation || '',
+    Number(data.amount || 0),
+    data.payType || '',
+    data.memo || '',
+    data.id || '',
+  ]]);
+
+  return json_({ saved: true, updated: true, rowNumber: targetRow });
+}
+
+function deleteContribution_(sheet, data) {
+  const targetRow = findContributionRow_(sheet, data);
+
+  if (!targetRow) {
+    return json_({ saved: false, reason: 'not-found' });
+  }
+
+  sheet.deleteRow(targetRow);
+
+  return json_({ saved: true, deleted: true, rowNumber: targetRow });
+}
+
+function findContributionRow_(sheet, data) {
   const lastRow = sheet.getLastRow();
   const count = Math.max(lastRow - 1, 0);
 
   if (count === 0) {
-    return json_({ saved: false, reason: 'not-found' });
+    return 0;
   }
 
   let targetRow = Number(data.rowNumber || 0);
@@ -99,21 +136,10 @@ function updateContribution_(sheet, data) {
   }
 
   if (!targetRow || targetRow < 2 || targetRow > lastRow) {
-    return json_({ saved: false, reason: 'not-found' });
+    return 0;
   }
 
-  sheet.getRange(targetRow, 1, 1, 8).setValues([[
-    new Date(data.createdAt),
-    data.side || '',
-    data.name || '',
-    data.relation || '',
-    Number(data.amount || 0),
-    data.payType || '',
-    data.memo || '',
-    data.id || '',
-  ]]);
-
-  return json_({ saved: true, updated: true, rowNumber: targetRow });
+  return targetRow;
 }
 
 function getSheet_() {

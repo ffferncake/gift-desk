@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { LoaderCircle, Pencil, RefreshCw, Trash2 } from "lucide-react";
 
 type Side = "신랑" | "신부" | "공통";
 type PayType = "현금" | "계좌";
@@ -65,6 +66,8 @@ export default function Home() {
   const [editingId, setEditingId] = useState("");
   const [editForm, setEditForm] = useState(initialForm);
   const [updatingId, setUpdatingId] = useState("");
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState("");
+  const [deletingId, setDeletingId] = useState("");
 
   useEffect(() => {
     void loadSheetStatus();
@@ -176,6 +179,7 @@ export default function Home() {
 
   function startEditing(contribution: Contribution) {
     setEditingId(getContributionKey(contribution));
+    setConfirmingDeleteId("");
     setEditForm({
       name: contribution.name,
       side: sideOptions.includes(contribution.side) ? contribution.side : "공통",
@@ -253,6 +257,59 @@ export default function Home() {
     }
   }
 
+  async function handleDelete(contribution: Contribution) {
+    const contributionKey = getContributionKey(contribution);
+
+    if (!contribution.id && !contribution.rowNumber) {
+      showToast({
+        tone: "error",
+        message: "이 항목은 시트 행 정보가 없어 삭제할 수 없습니다.",
+      });
+      return;
+    }
+
+    if (confirmingDeleteId !== contributionKey) {
+      setConfirmingDeleteId(contributionKey);
+      return;
+    }
+
+    setDeletingId(contributionKey);
+
+    try {
+      const response = await fetch("/api/contributions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(contribution),
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.reason || "delete failed");
+      }
+
+      setConfirmingDeleteId("");
+      setEditingId("");
+      setStatus(`${contribution.name || "항목"} 삭제 완료`);
+      showToast({
+        tone: "success",
+        message: `${contribution.name || "항목"} 삭제 완료`,
+      });
+      await loadSheetStatus();
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message === "missing-script-url"
+          ? "Apps Script URL을 .env.local에 넣어 주세요."
+          : "삭제하지 못했습니다. Apps Script 배포를 확인해 주세요.";
+
+      showToast({
+        tone: "error",
+        message,
+      });
+    } finally {
+      setDeletingId("");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f8f7f2] pb-6 text-stone-950">
       {toast && (
@@ -316,8 +373,13 @@ export default function Home() {
           <button
             type="button"
             onClick={loadSheetStatus}
-            className="col-span-2 h-11 rounded-lg border border-stone-300 bg-white px-4 text-sm font-bold text-stone-800 shadow-sm transition hover:bg-stone-50"
+            className="col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-4 text-sm font-bold text-stone-800 shadow-sm transition hover:bg-stone-50"
           >
+            {isLoadingSheet ? (
+              <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <RefreshCw className="size-4" aria-hidden="true" />
+            )}
             {isLoadingSheet ? "확인 중" : "현황 새로고침"}
           </button>
         </div>
@@ -451,8 +513,11 @@ export default function Home() {
             <button
               type="submit"
               disabled={isSaving}
-              className="sticky bottom-3 h-14 rounded-md bg-rose-700 px-4 text-lg font-black text-white shadow-lg shadow-rose-900/20 transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:bg-stone-400"
+              className="sticky bottom-3 inline-flex h-14 items-center justify-center gap-2 rounded-md bg-rose-700 px-4 text-lg font-black text-white shadow-lg shadow-rose-900/20 transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:bg-stone-400"
             >
+              {isSaving && (
+                <LoaderCircle className="size-5 animate-spin" aria-hidden="true" />
+              )}
               {isSaving ? "저장 중" : "접수 등록"}
             </button>
           </div>
@@ -586,8 +651,14 @@ export default function Home() {
                           disabled={
                             updatingId === getContributionKey(contribution, index)
                           }
-                          className="h-11 rounded-md bg-stone-950 text-sm font-black text-white transition hover:bg-stone-800 disabled:bg-stone-400"
+                          className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-stone-950 text-sm font-black text-white transition hover:bg-stone-800 disabled:bg-stone-400"
                         >
+                          {updatingId === getContributionKey(contribution, index) && (
+                            <LoaderCircle
+                              className="size-4 animate-spin"
+                              aria-hidden="true"
+                            />
+                          )}
                           {updatingId === getContributionKey(contribution, index)
                             ? "저장 중"
                             : "저장"}
@@ -638,9 +709,39 @@ export default function Home() {
                         type="button"
                         onClick={() => startEditing(contribution)}
                         disabled={!contribution.id && !contribution.rowNumber}
-                        className="h-10 rounded-md border border-stone-300 bg-white text-sm font-black text-stone-800 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:text-stone-400"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-stone-300 bg-white text-sm font-black text-stone-800 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:text-stone-400"
                       >
+                        <Pencil className="size-4" aria-hidden="true" />
                         수정
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(contribution)}
+                        disabled={
+                          deletingId === getContributionKey(contribution, index) ||
+                          (!contribution.id && !contribution.rowNumber)
+                        }
+                        className={`inline-flex h-10 items-center justify-center gap-2 rounded-md border text-sm font-black transition disabled:cursor-not-allowed disabled:text-stone-400 ${
+                          confirmingDeleteId ===
+                          getContributionKey(contribution, index)
+                            ? "border-rose-700 bg-rose-700 text-white hover:bg-rose-800"
+                            : "border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100"
+                        }`}
+                      >
+                        {deletingId === getContributionKey(contribution, index) ? (
+                          <LoaderCircle
+                            className="size-4 animate-spin"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <Trash2 className="size-4" aria-hidden="true" />
+                        )}
+                        {deletingId === getContributionKey(contribution, index)
+                          ? "삭제 중"
+                          : confirmingDeleteId ===
+                              getContributionKey(contribution, index)
+                            ? "삭제 확인"
+                            : "삭제"}
                       </button>
                     </div>
                   )}

@@ -58,6 +58,15 @@ export async function PATCH(request: Request) {
   });
 }
 
+export async function DELETE(request: Request) {
+  const payload = await request.json();
+
+  return syncWithScript({
+    action: "delete",
+    contribution: payload,
+  });
+}
+
 async function syncWithScript(payload: unknown) {
   const scriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
 
