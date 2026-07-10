@@ -45,6 +45,8 @@ const payTypeOptions: PayType[] = ["현금", "계좌"];
 const amountPresets = [
   { label: "50,000원", value: "50,000" },
   { label: "100,000원", value: "100,000" },
+  { label: "200,000원", value: "200,000" },
+  { label: "500,000원", value: "500,000" },
 ];
 
 const money = new Intl.NumberFormat("ko-KR");
@@ -330,7 +332,7 @@ export default function Home() {
       <section className="sticky top-0 z-30 border-b border-stone-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-4 py-3">
           <div>
-            <p className="text-xs font-semibold text-rose-700">Gift Desk</p>
+            <p className="text-xs font-semibold text-teal-700">Gift Desk</p>
             <h1 className="text-2xl font-black tracking-normal text-stone-950">
               축의대 접수 관리
             </h1>
@@ -404,7 +406,7 @@ export default function Home() {
                   setForm((current) => ({ ...current, name: event.target.value }))
                 }
                 autoFocus
-                className="h-14 rounded-md border border-stone-300 px-4 text-lg font-bold outline-none ring-rose-200 transition focus:ring-4"
+                className="h-14 rounded-md border border-stone-300 px-4 text-lg font-bold outline-none ring-teal-200 transition focus:ring-4"
                 placeholder="예: 김민수"
               />
             </label>
@@ -417,7 +419,7 @@ export default function Home() {
                   onClick={() => setForm((current) => ({ ...current, side }))}
                   className={`h-12 rounded-md border text-base font-black transition ${
                     form.side === side
-                      ? "border-rose-700 bg-rose-700 text-white"
+                      ? "border-teal-700 bg-teal-700 text-white"
                       : "border-stone-300 bg-white text-stone-700 hover:bg-stone-50"
                   }`}
                 >
@@ -436,7 +438,7 @@ export default function Home() {
                     relation: event.target.value,
                   }))
                 }
-                className="h-12 rounded-md border border-stone-300 px-3 text-base outline-none ring-rose-200 transition focus:ring-4"
+                className="h-12 rounded-md border border-stone-300 px-3 text-base outline-none ring-teal-200 transition focus:ring-4"
                 placeholder="예: 회사, 친구, 친척"
               />
             </label>
@@ -456,7 +458,7 @@ export default function Home() {
                     }
                     className={`h-14 rounded-md border text-lg font-black transition ${
                       form.amount === preset.value
-                        ? "border-rose-700 bg-rose-700 text-white"
+                        ? "border-teal-700 bg-teal-700 text-white"
                         : "border-stone-300 bg-white text-stone-700 hover:bg-stone-50"
                     }`}
                   >
@@ -475,7 +477,7 @@ export default function Home() {
                       amount: event.target.value.replace(/[^\d,]/g, ""),
                     }))
                   }
-                  className="h-14 w-full rounded-md border border-stone-300 px-4 text-lg font-black outline-none ring-rose-200 transition focus:ring-4"
+                  className="h-14 w-full rounded-md border border-stone-300 px-4 text-lg font-black outline-none ring-teal-200 transition focus:ring-4"
                   placeholder="직접 입력"
                 />
               </label>
@@ -505,7 +507,7 @@ export default function Home() {
                 onChange={(event) =>
                   setForm((current) => ({ ...current, memo: event.target.value }))
                 }
-                className="min-h-16 rounded-md border border-stone-300 px-4 py-3 text-base outline-none ring-rose-200 transition focus:ring-4"
+                className="min-h-16 rounded-md border border-stone-300 px-4 py-3 text-base outline-none ring-teal-200 transition focus:ring-4"
                 placeholder="봉투 번호, 대신 전달 등"
               />
             </label>
@@ -513,7 +515,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={isSaving}
-              className="sticky bottom-3 inline-flex h-14 items-center justify-center gap-2 rounded-md bg-rose-700 px-4 text-lg font-black text-white shadow-lg shadow-rose-900/20 transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:bg-stone-400"
+              className="sticky bottom-3 inline-flex h-14 items-center justify-center gap-2 rounded-md bg-teal-700 px-4 text-lg font-black text-white shadow-lg shadow-teal-900/20 transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-stone-400"
             >
               {isSaving && (
                 <LoaderCircle className="size-5 animate-spin" aria-hidden="true" />
@@ -559,7 +561,7 @@ export default function Home() {
                                 name: event.target.value,
                               }))
                             }
-                            className="h-11 w-full min-w-0 rounded-md border border-stone-300 px-3 text-base font-bold text-stone-950 outline-none ring-rose-200 transition focus:ring-4"
+                            className="h-11 w-full min-w-0 rounded-md border border-stone-300 px-3 text-base font-bold text-stone-950 outline-none ring-teal-200 transition focus:ring-4"
                           />
                         </label>
                         <label className="grid min-w-0 gap-1 text-xs font-bold text-stone-600">
@@ -573,7 +575,7 @@ export default function Home() {
                                 amount: event.target.value.replace(/[^\d,]/g, ""),
                               }))
                             }
-                            className="h-11 w-full min-w-0 rounded-md border border-stone-300 px-3 text-right text-base font-black text-stone-950 outline-none ring-rose-200 transition focus:ring-4"
+                            className="h-11 w-full min-w-0 rounded-md border border-stone-300 px-3 text-right text-base font-black text-stone-950 outline-none ring-teal-200 transition focus:ring-4"
                           />
                         </label>
                       </div>
@@ -588,7 +590,7 @@ export default function Home() {
                             }
                             className={`h-10 rounded-md border text-sm font-black transition ${
                               editForm.side === side
-                                ? "border-rose-700 bg-rose-700 text-white"
+                                ? "border-teal-700 bg-teal-700 text-white"
                                 : "border-stone-300 bg-white text-stone-700"
                             }`}
                           >
@@ -626,7 +628,7 @@ export default function Home() {
                               relation: event.target.value,
                             }))
                           }
-                          className="h-10 rounded-md border border-stone-300 px-3 text-sm font-semibold text-stone-950 outline-none ring-rose-200 transition focus:ring-4"
+                          className="h-10 rounded-md border border-stone-300 px-3 text-sm font-semibold text-stone-950 outline-none ring-teal-200 transition focus:ring-4"
                         />
                       </label>
 
@@ -640,7 +642,7 @@ export default function Home() {
                               memo: event.target.value,
                             }))
                           }
-                          className="min-h-14 rounded-md border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-950 outline-none ring-rose-200 transition focus:ring-4"
+                          className="min-h-14 rounded-md border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-950 outline-none ring-teal-200 transition focus:ring-4"
                         />
                       </label>
 
@@ -684,7 +686,7 @@ export default function Home() {
                               {contribution.side}
                             </span>
                             {contribution.payType && (
-                              <span className="rounded bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-800">
+                              <span className="rounded bg-teal-50 px-2 py-0.5 text-xs font-bold text-teal-800">
                                 {contribution.payType}
                               </span>
                             )}
