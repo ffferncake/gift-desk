@@ -330,7 +330,7 @@ export default function Home() {
       )}
 
       <section className="sticky top-0 z-30 border-b border-stone-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-4 py-3 md:max-w-5xl md:px-6">
           <div>
             <p className="text-xs font-semibold text-teal-700">Gift Desk</p>
             <h1 className="text-2xl font-black tracking-normal text-stone-950">
@@ -351,45 +351,46 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-md px-4 py-4">
-        <div className="mb-4 grid grid-cols-2 gap-2">
-          <div className="rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
-            <p className="text-sm font-bold text-stone-500">시트 총 접수</p>
-            <p className="mt-1 text-2xl font-black">
-              {sheetStatus ? `${sheetStatus.count}건` : "-"}
-            </p>
-            {sheetError && (
-              <p className="mt-2 text-xs font-semibold text-rose-700">
-                {sheetError}
+      <section className="mx-auto grid w-full max-w-md gap-4 px-4 py-4 md:max-w-5xl md:grid-cols-[minmax(320px,420px)_minmax(0,1fr)] md:items-start md:px-6">
+        <div className="grid gap-4">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
+              <p className="text-sm font-bold text-stone-500">시트 총 접수</p>
+              <p className="mt-1 text-2xl font-black">
+                {sheetStatus ? `${sheetStatus.count}건` : "-"}
               </p>
-            )}
+              {sheetError && (
+                <p className="mt-2 text-xs font-semibold text-rose-700">
+                  {sheetError}
+                </p>
+              )}
+            </div>
+            <div className="rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
+              <p className="text-sm font-bold text-stone-500">시트 총 금액</p>
+              <p className="mt-1 break-words text-2xl font-black">
+                {sheetStatus
+                  ? `${money.format(sheetStatus.totalAmount)}원`
+                  : "-"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={loadSheetStatus}
+              className="col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-4 text-sm font-bold text-stone-800 shadow-sm transition hover:bg-stone-50"
+            >
+              {isLoadingSheet ? (
+                <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <RefreshCw className="size-4" aria-hidden="true" />
+              )}
+              {isLoadingSheet ? "확인 중" : "현황 새로고침"}
+            </button>
           </div>
-          <div className="rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
-            <p className="text-sm font-bold text-stone-500">시트 총 금액</p>
-            <p className="mt-1 break-words text-2xl font-black">
-              {sheetStatus
-                ? `${money.format(sheetStatus.totalAmount)}원`
-                : "-"}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={loadSheetStatus}
-            className="col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-4 text-sm font-bold text-stone-800 shadow-sm transition hover:bg-stone-50"
-          >
-            {isLoadingSheet ? (
-              <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <RefreshCw className="size-4" aria-hidden="true" />
-            )}
-            {isLoadingSheet ? "확인 중" : "현황 새로고침"}
-          </button>
-        </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm"
-        >
+          <form
+            onSubmit={handleSubmit}
+            className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm"
+          >
           <div className="flex items-center justify-between gap-3 border-b border-stone-100 pb-3">
             <h2 className="text-lg font-black">새 접수</h2>
             <span className="max-w-44 truncate rounded-md bg-stone-100 px-3 py-1 text-xs font-bold text-stone-700">
@@ -523,9 +524,10 @@ export default function Home() {
               {isSaving ? "저장 중" : "접수 등록"}
             </button>
           </div>
-        </form>
+          </form>
+        </div>
 
-        <section className="mt-4 rounded-lg border border-stone-200 bg-white shadow-sm">
+        <section className="rounded-lg border border-stone-200 bg-white shadow-sm">
           <div className="flex items-center justify-between gap-3 border-b border-stone-100 px-4 py-3">
             <h2 className="text-lg font-black">접수 목록</h2>
             <span className="text-xs font-bold text-stone-500">
@@ -707,44 +709,48 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => startEditing(contribution)}
-                        disabled={!contribution.id && !contribution.rowNumber}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-stone-300 bg-white text-sm font-black text-stone-800 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:text-stone-400"
-                      >
-                        <Pencil className="size-4" aria-hidden="true" />
-                        수정
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete(contribution)}
-                        disabled={
-                          deletingId === getContributionKey(contribution, index) ||
-                          (!contribution.id && !contribution.rowNumber)
-                        }
-                        className={`inline-flex h-10 items-center justify-center gap-2 rounded-md border text-sm font-black transition disabled:cursor-not-allowed disabled:text-stone-400 ${
-                          confirmingDeleteId ===
-                          getContributionKey(contribution, index)
-                            ? "border-rose-700 bg-rose-700 text-white hover:bg-rose-800"
-                            : "border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100"
-                        }`}
-                      >
-                        {deletingId === getContributionKey(contribution, index) ? (
-                          <LoaderCircle
-                            className="size-4 animate-spin"
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <Trash2 className="size-4" aria-hidden="true" />
-                        )}
-                        {deletingId === getContributionKey(contribution, index)
-                          ? "삭제 중"
-                          : confirmingDeleteId ===
-                              getContributionKey(contribution, index)
-                            ? "삭제 확인"
-                            : "삭제"}
-                      </button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startEditing(contribution)}
+                          disabled={!contribution.id && !contribution.rowNumber}
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-stone-300 bg-white text-sm font-black text-stone-800 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:text-stone-400"
+                        >
+                          <Pencil className="size-4" aria-hidden="true" />
+                          수정
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDelete(contribution)}
+                          disabled={
+                            deletingId ===
+                              getContributionKey(contribution, index) ||
+                            (!contribution.id && !contribution.rowNumber)
+                          }
+                          className={`inline-flex h-10 items-center justify-center gap-2 rounded-md border text-sm font-black transition disabled:cursor-not-allowed disabled:text-stone-400 ${
+                            confirmingDeleteId ===
+                            getContributionKey(contribution, index)
+                              ? "border-rose-700 bg-rose-700 text-white hover:bg-rose-800"
+                              : "border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100"
+                          }`}
+                        >
+                          {deletingId ===
+                          getContributionKey(contribution, index) ? (
+                            <LoaderCircle
+                              className="size-4 animate-spin"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <Trash2 className="size-4" aria-hidden="true" />
+                          )}
+                          {deletingId === getContributionKey(contribution, index)
+                            ? "삭제 중"
+                            : confirmingDeleteId ===
+                                getContributionKey(contribution, index)
+                              ? "삭제 확인"
+                              : "삭제"}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </li>
